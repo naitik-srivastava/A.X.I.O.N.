@@ -257,9 +257,6 @@ Perfect for caves, forests, or abandoned sites where GPS and Wi-Fi fail
 Fully documented, modular, and easy to build upon — ideal for students
 
 🗂️ Folder Structure
-mathematica
-Copy
-Edit
 A.X.I.O.N/
 ├── README.md
 ├── docs/
