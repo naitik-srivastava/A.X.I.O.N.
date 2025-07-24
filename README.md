@@ -24,7 +24,7 @@
 
 
 Project Overview – A.X.I.O.N.
-A.X.I.O.N. – Adaptive eXploration & Intelligent Observation NodeBy: Naitik Srivastava
+Adaptive eXploration & Intelligent Observation NodeBy: Naitik Srivastava
 University: Babasaheb Bhimrao Ambedkar University, UIET – Department of Electronics and Communication Engineering
 Development Budget: ₹11,000 (initial prototype) → optimized under ₹4,000
 
