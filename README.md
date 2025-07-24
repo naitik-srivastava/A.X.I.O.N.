@@ -127,6 +127,7 @@ Creates its own Wi-Fi network
 Hosts a live SVGA (800x600) video stream
 
 Accessible via any browser without internet
+and can be viewed on a Virtual Reality Box
 
 Future plans: AI-based gesture/face/object recognition to improve autonomous decisions
 
