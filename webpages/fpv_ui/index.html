@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ESP32-CAM VR Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        #flash-btn {
+    display: none !important;
+}
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+        
+        .vr-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .stereo-view {
+            position: relative;
+            flex-direction: column;
+
+            width: 70%;
+            max-width: 600px;
+            height: 80%;
+            display: flex;
+            gap: 5%;
+            transform: translateZ(0);
+        }
+        
+        .eye-view {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 48%;
+            overflow: hidden;
+            border-radius: 40px;
+            background: #111;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.8),
+                0 0 30px rgba(0, 100, 200, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .lens-distortion {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.7) 100%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+.eye-view img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* LEFT EYE: no change */
+.left-view img {
+ transform: rotate(90deg);  
+}
+
+/* RIGHT EYE: mirror horizontally */
+.right-view img {
+   transform: rotate(90deg);  
+  // transform: scaleX(-1);
+
+}
+        
+        .control-bar {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 100;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            background: linear-gradient(to bottom, #2c3e50, #1a2530);
+            color: #ecf0f1;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+        }
+        
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            z-index: 50;
+            padding: 0 20px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        }
+        
+        .gyro-warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #e74c3c;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 80%;
+            z-index: 200;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            border: 1px solid #c0392b;
+            display: none;
+              display: none !important;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    width: 0;
+    overflow: hidden;
+        }
+        
+        .gyro-warning h3 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 24px;
+            z-index: 5;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #3498db;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fps-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #3498db;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 50;
+        }
+        
+        /* Fullscreen styling */
+        :fullscreen .control-bar {
+            top: 25px;
+        }
+        
+        :fullscreen .btn {
+            padding: 14px 28px;
+            font-size: 18px;
+        }
+        
+        :fullscreen .instructions {
+            bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .vr-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.9) 80%);
+            pointer-events: none;
+            z-index: 20;
+        }
+        
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #2ecc71;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 50;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div class="vr-container">
+        <div class="stereo-view">
+            <!-- Left Eye -->
+            <div class="eye-view left-view">
+                <img id="left-eye" src="http://192.168.4.1:81/stream" alt="Left Eye Stream">
+                <div class="lens-distortion"></div>
+            </div>
+            
+            <!-- Right Eye -->
+            <div class="eye-view right-view">
+                <img id="right-eye" src="http://192.168.4.1:81/stream" alt="Right Eye Stream">
+                <div class="lens-distortion"></div>
+            </div>
+        </div>
+        
+        <div class="vr-overlay"></div>
+    </div>
+    
+    <div class="control-bar">
+        <button id="flash-btn" class="btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 2H9v2H7v6h2V4h6V2z"></path>
+                <path d="M15 22H9v-2H7v-6h2v4h6v2z"></path>
+                <path d="M17 9h4v6h-4z"></path>
+                <path d="M3 9h4v6H3z"></path>
+            </svg>
+            Toggle Flash
+        </button>
+        <button id="fullscreen-btn" class="btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+            Fullscreen
+        </button>
+    </div>
+    
+    <div class="connection-status">
+        <div class="status-indicator"></div>
+        <span>Connected to ESP32-CAM</span>
+    </div>
+    
+    <div class="fps-counter">FPS: <span id="fps">0</span></div>
+    
+    <div class="instructions">
+        Place your phone in a VR headset and look around to view the stream
+    </div>
+    
+    <div id="gyro-warning" class="gyro-warning">
+        <h3>⚠️ Gyroscope Not Available</h3>
+        <p>Your device doesn't support gyroscope or permission was denied.</p>
+        <p>Head tracking won't work. Try on a mobile device with gyroscope.</p>
+    </div>
+    
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        Loading ESP32-CAM stream...
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elements
+            const stereoView = document.querySelector('.stereo-view');
+            const flashBtn = document.getElementById('flash-btn');
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const gyroWarning = document.getElementById('gyro-warning');
+            const loading = document.getElementById('loading');
+            const fpsDisplay = document.getElementById('fps');
+            const leftEyeImg = document.getElementById('left-eye');
+            const rightEyeImg = document.getElementById('right-eye');
+            
+            // State variables
+            let flashState = 0;
+            let initialAlpha = null;
+            let isGyroAvailable = false;
+            let lastFrameTime = 0;
+            let frameCount = 0;
+            let fps = 0;
+            
+            // Check if device supports gyroscope
+            if ('DeviceOrientationEvent' in window) {
+                window.addEventListener('deviceorientation', handleOrientation);
+                isGyroAvailable = true;
+            } else {
+                gyroWarning.style.display = 'block';
+            }
+            
+            // Hide loading when streams are loaded
+            const images = [leftEyeImg, rightEyeImg];
+            let loadedCount = 0;
+            
+            images.forEach(img => {
+                img.onload = () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) {
+                        setTimeout(() => {
+                            loading.style.display = 'none';
+                        }, 800);
+                    }
+                };
+                
+                img.onerror = () => {
+                    loading.innerHTML = `
+                        <div style="color: #e74c3c; margin-bottom: 20px;">⚠️</div>
+                        <div>Error loading stream</div>
+                        <div style="font-size: 16px; margin-top: 10px;">Check ESP32-CAM connection</div>
+                    `;
+                };
+            });
+            
+            // FPS counter
+            function updateFPS() {
+                const now = performance.now();
+                frameCount++;
+                
+                if (now >= lastFrameTime + 1000) {
+                    fps = Math.round(frameCount * 1000 / (now - lastFrameTime));
+                    fpsDisplay.textContent = fps;
+                    frameCount = 0;
+                    lastFrameTime = now;
+                }
+                
+                requestAnimationFrame(updateFPS);
+            }
+            
+            updateFPS();
+            
+            // Toggle flash function
+            flashBtn.addEventListener('click', () => {
+                flashState = flashState === 0 ? 1 : 0;
+                
+                // Add visual feedback
+                flashBtn.style.background = flashState === 1 
+                    ? 'linear-gradient(to bottom, #f1c40f, #f39c12)' 
+                    : 'linear-gradient(to bottom, #2c3e50, #1a2530)';
+                
+                fetch(`/flash?state=${flashState}`)
+                    .catch(error => console.error('Error toggling flash:', error));
+                
+                flashBtn.innerHTML = flashState === 1 
+                    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="#fff"><path d="M15 2H9v2H7v6h2V4h6V2z"></path><path d="M15 22H9v-2H7v-6h2v4h6v2z"></path><path d="M17 9h4v6h-4z"></path><path d="M3 9h4v6H3z"></path></svg> Flash ON`
+                    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 2H9v2H7v6h2V4h6V2z"></path><path d="M15 22H9v-2H7v-6h2v4h6v2z"></path><path d="M17 9h4v6h-4z"></path><path d="M3 9h4v6H3z"></path></svg> Toggle Flash`;
+            });
+            
+            // Fullscreen function
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            
+            // Handle device orientation
+            function handleOrientation(event) {
+                if (event.alpha !== null) {
+                    if (initialAlpha === null) {
+                        initialAlpha = event.alpha;
+                    }
+                    
+                    // Calculate rotation difference
+                    let delta = event.alpha - initialAlpha;
+                    
+                    // Normalize delta to [-180, 180]
+                    if (delta > 180) delta -= 360;
+                    if (delta < -180) delta += 360;
+                    
+                    // Apply movement with limits (max 5 degrees rotation)
+                    const maxRotation = 5;
+                    const rotation = (delta / 180) * maxRotation;
+                    
+                    // Apply the transformation
+                    stereoView.style.transform = `rotateY(${rotation}deg)`;
+                }
+            }
+            
+            // Fullscreen toggle
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error(`Error enabling fullscreen: ${err.message}`);
+                    });
+fullscreenBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2v-4m0-10V5a2 2 0 0 1 2-2h4m10 0h4a2 2 0 0 1 2 2v4m0 10v4a2 2 0 0 1-2 2h-4"></path></svg>`;
+fullscreenBtn.style.padding = "6px 12px";
+fullscreenBtn.style.fontSize = "12px";
+fullscreenBtn.style.borderRadius = "20px";
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                        fullscreenBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg> Fullscreen`;
+                    }
+                }
+            }
+            
+            // Handle fullscreen change
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    fullscreenBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg> Fullscreen`;
+                }
+            });
+            
+            // Handle device rotation for non-gyro devices
+            window.addEventListener('deviceorientation', () => {
+                if (!isGyroAvailable) {
+                    gyroWarning.style.display = 'none';
+                    isGyroAvailable = true;
+                }
+            }, { once: true });
+            
+            // Add slight parallax effect on mouse move for desktop testing
+            document.addEventListener('mousemove', (e) => {
+                if (isGyroAvailable) return;
+                
+                const x = (e.clientX / window.innerWidth) * 4 - 2;
+                const y = (e.clientY / window.innerHeight) * 4 - 2;
+                stereoView.style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
+            });
+            
+            // Prevent scrolling on touch devices
+            document.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+            }, { passive: false });
+        });
+    </script>
+</body>
+</html>

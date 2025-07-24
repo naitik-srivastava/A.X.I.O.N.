@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rover Live Mapper</title>
+  <style>
+    /* Container and layout styling - ALL SCREENS */
+    body {
+      background-color: #111;
+      color: #0f0;
+      font-family: "Courier New", Courier, monospace;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      /* touch-action: none; */
+      overflow-y: auto;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 95%;
+      max-width: 1200px;
+      margin: 10px auto;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 10px 0;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: #0f0;
+      text-shadow: 0 0 5px #0f0;
+    }
+
+    /* Controls styling - ALL SCREENS */
+    .controls {
+      margin: 15px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .controls button {
+      background-color: #222;
+      color: #0f0;
+      border: 1px solid #0f0;
+      padding: 8px 16px;
+      font-size: clamp(0.8rem, 2vw, 1rem);
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      min-width: 100px;
+    }
+
+    .controls button:hover {
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+      transform: translateY(-2px);
+    }
+
+    /* Main content layout - ALL SCREENS */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 10px;
+    }
+
+    /* Canvas styling - ALL SCREENS */
+    #mapCanvas {
+      background-color: #000;
+      border: 2px solid #0f0;
+      width: 100%;
+      height: 60vh;
+      margin-bottom: 20px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    /* Sensor panel styling - ALL SCREENS */
+    #sensorPanel {
+
+
+  background-color: transparent;   /* make it see-through always */
+  /* border: 1px solid #0f0; */
+  /* border-radius: 8px; */
+  /* box-shadow: 0 0 10px #0f0; */
+  padding: 15px;
+  width: 100%;
+  margin: 20px auto;
+  overflow-y: auto;
+  max-height: 40vh;
+  /* NO position here! */
+    }
+
+    .map-wrapper {
+  position: relative;
+  display: inline-block;
+    }
+
+    #sensorPanel div {
+      margin-bottom: 12px;
+      font-size: clamp(0.8rem, 1.5vw, 1rem);
+      word-break: break-word;
+    }
+
+    /* PC-ONLY VIEW CHANGES (min-width: 1200px) */
+    @media (min-width: 1200px) {
+  .container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .main-content {
+    position: relative; /* Anchor for absolute overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: auto;
+  }
+
+  #mapCanvas {
+    width: 95vw;
+    height: 80vh;
+    border: 2px solid #0f0;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    display: block;
+  }
+
+  #sensorPanel {
+    position: absolute;
+    top: 30px;
+    right: 0px;
+    width: 280px;
+    background-color: transparent; /* translucent background */
+    /* backdrop-filter: blur(6px); */
+    /* border: 1px solid rgba(0, 255, 0, 0.5);
+    border-radius: 10px; */
+    /* box-shadow: 0 0 10px rgba(0, 255, 0, 0.4); */
+    padding: 14px;
+    z-index: 10;
+    overflow-y: auto;
+    color: #0f0;
+  }
+  .D { 
+    position: absolute;
+    top: 30px;
+left:20px;
+    width: 280px;
+    background-color: transparent; /* translucent background */
+    /* backdrop-filter: blur(6px); */
+    /* border: 1px solid rgba(0, 255, 0, 0.5);
+    border-radius: 10px; */
+    /* box-shadow: 0 0 10px rgba(0, 255, 0, 0.4); */
+    padding: 14px;
+    z-index: 10;
+    overflow-y: auto;
+    color: #0f0;    
+  }
+  
+}
+    /* TABLET VIEW (unchanged from your version) */
+    @media (min-width: 768px) and (max-width: 1199px) {
+      #mapCanvas {
+        width: 95%;
+        height: 70vh;
+        margin-bottom: 0;
+      }
+
+      #sensorPanel {
+        width: 95%;
+        max-height: 25vh;
+        margin: 20px auto;
+      }
+    }
+
+    /* MOBILE VIEW (unchanged from your version) */
+    @media (max-width: 767px) {
+      .mobile-info {
+        display: block;
+        color: #0f0;
+        font-size: 0.8rem;
+        margin-top: 5px;
+        text-align: center;
+      }
+
+      #mapCanvas {
+        height: 50vh;
+      }
+
+      #sensorPanel {
+        max-height: 30vh;
+      }
+      body {
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  #mapCanvas {
+    touch-action: pan-x pan-y;
+  }
+  
+  #sensorPanel {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: 40vh !important;
+  }
+    }
+
+    /* SMALL MOBILE VIEW (unchanged from your version) */
+    @media (max-width: 480px) {
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .controls button {
+        width: 80%;
+        margin: 3px 0;
+      }
+
+      #sensorPanel {
+        max-height: 40vh;
+      }
+
+      #sensorPanel div {
+        font-size: 0.9rem;
+      }
+    }
+
+    #followBtn {
+      background-color: #00aa00;
+      color: white;
+    }
+
+    #followBtn.off {
+      background-color: #aa0000;
+    }
+  </style>
+</head>
+<body onload="load()">
+  <div class="container">
+    <h1>Rover Live Mapper</h1>
+
+    <div class="controls">
+      <button id="startBtn">Start</button>
+      <button id="resetBtn">Reset</button>
+      <button id="zoomInBtn">Zoom In</button>
+      <button id="zoomOutBtn">Zoom Out</button>
+      <button id="followBtn">Auto-Follow: ON</button>
+    </div>
+
+    <p class="mobile-info">A project by Naitik Srivastava</p>
+
+    <div class="main-content">
+      <!-- Wrap canvas and sensorPanel together -->
+      <div class="map-wrapper">
+        <canvas id="mapCanvas" width="800" height="600"></canvas>
+        <div id="sensorPanel">
+          <div>Yaw: <span id="yawValue">0</span>°</div>
+          <div>Distance: <span id="distanceValue">0</span></div>
+          <div>Front: <span id="frontValue">0</span></div>
+          <div>Left: <span id="leftValue">0</span></div>
+          <div>Right: <span id="rightValue">0</span></div>
+        </div>
+        <div  class="D"> <h1 id="D">HEADING DIRECTION</h1>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+      let realYawDeg = 0;
+      let realleftDist = 0;
+      let realrightDist = 0;
+      let realfrontDist = 0;
+      let realDist = 0;
+      let realPosX = 0;
+      let realPosY = 0;
+      let frameCount = 0;
+      let autoFollow = true;
+      let smoothPanX = 0;
+      let smoothPanY = 0;
+      let webSocket;
+      let isDragging = false;
+      let lastPanX = 0;
+      let lastPanY = 0;
+      let panOffsetX = 0;
+      let panOffsetY = 0;
+      let scale = 1;
+      let touchStartDistance = 0;
+      let isPinching = false;
+      let DIS=0;
+      let prevDIS = 0;
+      let Mcmd = 0; 
+
+
+      function load() {
+        webSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
+
+        webSocket.onmessage = function (event) {
+          var data = JSON.parse(event.data);
+          console.log(data);
+
+          realYawDeg = data.Gx;
+          realleftDist = data.distance2;
+          realrightDist = data.distance3;
+          realfrontDist = data.RadarDist;
+          realDist = 0;
+          realPosX = data.PosX;
+          realPosY = data.PosY;
+           DIS = data.Distance;
+           Mcmd = data.Manualcmd;
+
+
+            document.getElementById("sensorPanel").innerHTML =
+              "Temperature: " +
+              data.Temp +
+              " &#176;C<br>" +
+              "Humidity: " +
+              data.Humid +
+              " %<br>" +
+              "Pressure: " +
+              data.Pressure +
+              " Pa<br>" +
+              "Altitude: " +
+              data.Altitude +
+              " m<br>" +
+              "Battery Voltage: " +
+              data.volt +
+              "  Volts<br>" +
+              "RightWheelDist: " +
+              data.PosX +
+              "  cm<br>" +
+              "LeftWheelDist: " +
+              data.PosY +
+              "  cm<br>" +
+              "Front Clearance: " +
+              data.distance1 +
+              " cm<br>" +
+              "(RadarAngle, RadarDist): (" +
+              data.angle +
+              "&#176;, " +
+              data.RadarDist +
+              " cm)<br>" +
+              "BIO SIGNS: " +
+              (data.Pir ? "BIO Signatures Detected" : "No Bio Signatures") +
+              "<br>" +
+              "Left Clearance: " +
+              data.distance2 +
+              " cm<br>" +
+              "Right Clearance: " +
+              data.distance3 +
+              " cm<br>" +
+              "Acceleration-X: " +
+              data.AccX +
+              "<br>" +
+              "Acceleration-Y: " +
+              data.AccY +
+              "<br>" +
+              "Acceleration-Z: " +
+              data.AccZ +
+              "<br>" +
+              "Yaw(Left or Right): " +
+              data.Gx +
+              "<br>" +
+              "Current-Direction: " +
+              data.State +
+              "<br>" +
+              "Algo-Direction: " +
+              data.S +
+              "<br>" +
+              "Fire Detector: " +
+              data.FireD +
+              "<br>" +
+              "IR1: " +
+              data.ir1 +
+              "<br>" +
+              "IR2: " +
+              data.ir2;
+          };
+  
+
+        initCanvas();
+      }
+
+      // Get canvas and its 2D context
+      const canvas = document.getElementById("mapCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // Pre-calc center of canvas for drawing coordinates
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      // UI elements from HTML
+      const startBtn = document.getElementById("startBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const zoomInBtn = document.getElementById("zoomInBtn");
+      const zoomOutBtn = document.getElementById("zoomOutBtn");
+      const yawValueElem = document.getElementById("yawValue");
+      const distanceValueElem = document.getElementById("distanceValue");
+      const frontValueElem = document.getElementById("frontValue");
+      const leftValueElem = document.getElementById("leftValue");
+      const rightValueElem = document.getElementById("rightValue");
+   
+    
+    
+    // Simulation state variables
+
+// Segment tracking variables
+let segments = []; // Stores completed path segments
+let currentSegment = { // Tracks current straight segment
+  startX: 0, 
+  startY: 0, 
+  startDistance: 0, 
+  lastYaw: 0 
+};
+let lastYaw = 0; // Stores previous yaw for comparison
+
+
+
+      const CM_PER_UNIT = 15;
+      let posX = 0,
+        posY = 0;
+      let yaw = 0;
+      let distance = 0;
+      let cellSize = 20;
+      let pathPoints = [{ x: posX, y: posY }];
+      let obstacles = [];
+      let simInterval = null;
+
+      // Zoom limits to avoid too much zooming
+      const MIN_CELL_SIZE = 5;
+      const MAX_CELL_SIZE = 50;
+
+      function initCanvas() {
+        // Add touch event listeners
+        canvas.addEventListener("touchstart", handleTouchStart, {
+          passive: false,
+        });
+        canvas.addEventListener("touchmove", handleTouchMove, {
+          passive: false,
+        });
+        canvas.addEventListener("touchend", handleTouchEnd);
+        canvas.addEventListener("touchcancel", handleTouchEnd);
+
+        // Mouse event listeners
+        canvas.addEventListener("mousedown", handleMouseDown);
+        canvas.addEventListener("mousemove", handleMouseMove);
+        canvas.addEventListener("mouseup", handleMouseUp);
+        canvas.addEventListener("mouseleave", handleMouseUp);
+
+        // Auto-follow button
+        document
+          .getElementById("followBtn")
+          .addEventListener("click", function () {
+            autoFollow = !autoFollow;
+            this.textContent = autoFollow
+              ? "Auto-Follow: ON"
+              : "Auto-Follow: OFF";
+            this.classList.toggle("off", !autoFollow);
+
+            if (autoFollow) {
+              smoothPanX = panOffsetX;
+              smoothPanY = panOffsetY;
+            }
+          });
+
+        // Button event listeners
+        startBtn.addEventListener("click", startSimulation);
+        resetBtn.addEventListener("click", resetSimulation);
+        zoomInBtn.addEventListener("click", zoomIn);
+        zoomOutBtn.addEventListener("click", zoomOut);
+
+        // Initial render
+        render();
+      }
+
+      // Clear entire canvas
+      function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Draw grid lines using current cellSize
+      function drawGrid() {
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 1;
+
+        // Vertical grid lines
+        for (let x = panOffsetX % cellSize; x <= canvas.width; x += cellSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+
+        // Horizontal grid lines
+        for (let y = panOffsetY % cellSize; y <= canvas.height; y += cellSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+      }
+
+      function drawPath() {
+        if (pathPoints.length < 2) return;
+
+        ctx.strokeStyle = "#0f0";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        const startPt = pathPoints[0];
+        ctx.moveTo(
+          centerX + startPt.x * cellSize + panOffsetX,
+          centerY - startPt.y * cellSize + panOffsetY
+        );
+
+        for (let i = 1; i < pathPoints.length; i++) {
+          const pt = pathPoints[i];
+          ctx.lineTo(
+            centerX + pt.x * cellSize + panOffsetX,
+            centerY - pt.y * cellSize + panOffsetY
+          );
+        }
+        ctx.stroke();
+      }
+
+      function drawObstacles() {
+    ctx.fillStyle = "#f00";
+    obstacles.forEach((obs) => {
+        const drawX = centerX + obs.x * cellSize + panOffsetX;
+        const drawY = centerY - obs.y * cellSize + panOffsetY;
+        const size = cellSize / 2;
+        
+        // Draw the obstacle rectangle
+        ctx.fillRect(drawX - size / 2, drawY - size / 2, size, size);
+        if(cellSize>24 && cellSize<51) {
+          
+        // Draw distance text inside (new code)
+        ctx.fillStyle = "#fff"; // Green text
+        ctx.font = "bold 11px Arial"; // Small, readable font
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`${obs.distance.toFixed(0)}`, drawX, drawY);
+        
+        // Reset to red for next obstacle
+        ctx.fillStyle = "#f00";}
+
+    });
+}   
+
+function drawSegmentDistances() {
+  const textPadding = 2; // Padding around text
+  const minSegmentLength = 1.0; // Minimum segment length to display
+  
+  // Draw distances for completed segments
+  segments.forEach(segment => {
+    if (segment.distance < minSegmentLength) return;
+    
+    const midX = (segment.startX + segment.endX) / 2;
+    const midY = (segment.startY + segment.endY) / 2;
+    
+    const canvasX = centerX + midX * cellSize + panOffsetX;
+    const canvasY = centerY - midY * cellSize + panOffsetY;
+    
+    // Calculate text dimensions
+    const text = segment.distance.toFixed(1)*10 + "cm";
+    ctx.font = "bold " + Math.max(10, cellSize/3) + "px Arial";
+    const textWidth = ctx.measureText(text).width;
+    
+    // Draw background rectangle
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(
+      canvasX - textWidth/2 - textPadding,
+      canvasY - cellSize/4 - textPadding,
+      textWidth + textPadding*2,
+      cellSize/2 + textPadding*2
+    );
+    
+    // Draw text
+    ctx.fillStyle = "#0f0";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, canvasX, canvasY);
+  });
+  
+  // Draw distance for current active segment
+  const currentSegDistance = distance - currentSegment.startDistance;
+  if (currentSegDistance > minSegmentLength) {
+    const midX = (currentSegment.startX + posX) / 2;
+    const midY = (currentSegment.startY + posY) / 2;
+    
+    const canvasX = centerX + midX * cellSize + panOffsetX;
+    const canvasY = centerY - midY * cellSize + panOffsetY;
+    
+    // Calculate text dimensions
+    const text = currentSegDistance.toFixed(1)*10 + "cm";
+    ctx.font = "bold " + Math.max(10, cellSize/3) + "px Arial";
+    const textWidth = ctx.measureText(text).width;
+    
+    // Draw background rectangle
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(
+      canvasX - textWidth/2 - textPadding,
+      canvasY - cellSize/4 - textPadding,
+      textWidth + textPadding*2,
+      cellSize/2 + textPadding*2
+    );
+    
+    // Draw text
+    ctx.fillStyle = "#0f0";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, canvasX, canvasY);
+  }
+}
+
+function drawRover() {
+        // Draw permanent blue starting point
+        ctx.fillStyle = "#00f";
+        ctx.beginPath();
+        ctx.arc(
+          centerX + panOffsetX,
+          centerY + panOffsetY,
+          cellSize * 0.3,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.strokeStyle = "#00f";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(
+          centerX + panOffsetX,
+          centerY + panOffsetY,
+          cellSize * 0.7,
+          0,
+          Math.PI * 2
+        );
+        ctx.stroke();
+
+        // Draw the rover
+        const radius = cellSize * 0.3;
+        const x = centerX + posX * cellSize + panOffsetX;
+        const y = centerY - posY * cellSize + panOffsetY;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(yaw);
+
+        ctx.fillStyle = "#ff0";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#0f0";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius + 8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // Update simulation state: rover movement, sensor readings, and new obstacles
+      function updateSensors() {
+// DIS+= 1; (this line remains as is from your original code)
+
+// Initialize turning state variables if not defined
+if (typeof isTurning === 'undefined') {
+    var isTurning = false;
+    var preTurnDIS = DIS;
+}
+
+// Initialize prevDIS if it's not set
+if (typeof prevDIS === 'undefined') {
+    prevDIS = DIS;
+}
+
+// Handle Mcmd 3/4 states
+if (Mcmd === 3 || Mcmd === 4) {
+    if (!isTurning) {
+        preTurnDIS = prevDIS;  // Save DIS state before turning started
+        isTurning = true;
+    }
+    prevDIS = DIS;  // Freeze position tracking during turns
+} else if (isTurning) {
+    prevDIS = preTurnDIS;  // Restore pre-turn DIS state
+    isTurning = false;
+}
+
+// Convert yaw to radians (assuming realYawDeg is in degrees)
+yaw = -(realYawDeg * Math.PI) / 180;
+
+// Calculate distance moved since last update (in cm)
+const deltaDIS = DIS - prevDIS;
+prevDIS = DIS;  // Store current distance for next update
+
+// Only process movement if not turning AND significant distance moved
+if (!(Mcmd === 3 || Mcmd === 4)) {
+    // Convert movement to position units
+    const deltaDistance = deltaDIS / CM_PER_UNIT;
+
+    // Only update position if rover has moved significantly (>1cm threshold)
+    if (deltaDistance >= 0.1) {
+        // Update position (using current yaw direction)
+        posX += deltaDistance * Math.cos(yaw);
+        posY += deltaDistance * Math.sin(yaw);
+        distance += deltaDistance;
+
+        // Segment detection logic (for path segmentation)
+        const yawDeg = (yaw * 180) / Math.PI;
+        const yawChange = Math.abs(yawDeg - lastYaw);
+
+        // If significant direction change (>50 degrees)
+        if (yawChange > 50) {
+            // Finalize current segment if meaningful distance was traveled
+            const segmentDistance = distance - currentSegment.startDistance;
+            if (segmentDistance > 0.5) { // Minimum segment length threshold
+                segments.push({
+                    startX: currentSegment.startX,
+                    startY: currentSegment.startY,
+                    endX: posX,
+                    endY: posY,
+                    distance: segmentDistance
+                });
+            }
+            
+            // Start new segment
+            currentSegment = {
+                startX: posX,
+                startY: posY,
+                startDistance: distance,
+                lastYaw: yawDeg
+            };
+        }
+        
+        // Update lastYaw for next comparison
+        lastYaw = yawDeg;
+    }
+}
+        // const moveStep = 0.5;
+        // posX += (moveStep * Math.cos(yaw)) / CM_PER_UNIT;
+        // posY += (moveStep * Math.sin(yaw)) / CM_PER_UNIT;
+        // distance += moveStep / CM_PER_UNIT;
+
+
+
+
+
+
+        // // const moveStep = 0.5;
+        // posX = (DIS * Math.cos(yaw)) / CM_PER_UNIT;
+        // posY = (DIS * Math.sin(yaw)) / CM_PER_UNIT;
+        // distance = DIS / CM_PER_UNIT;
+
+        // Ensure rover stays within bounds
+        const frontDist = realfrontDist;
+        const leftDist = realleftDist;
+        const rightDist = realrightDist;
+        // const frontDist = Math.random() * 200 + 50;
+        // const leftDist = Math.random() * 200 + 50;
+        // const rightDist = Math.random() * 200 + 50;
+
+      //  const frontDist = 100;
+      //   const leftDist = 75;
+      //   const rightDist = 50;
+
+
+        // Update sensor panel values in HTML
+        yawValueElem.textContent = (((yaw * 180) / Math.PI) % 360).toFixed(1);
+        distanceValueElem.textContent = distance.toFixed(1);
+        frontValueElem.textContent = frontDist.toFixed(1);
+        leftValueElem.textContent = leftDist.toFixed(1);
+        rightValueElem.textContent = rightDist.toFixed(1);
+
+        // Add current position to path
+        if (frameCount++ % 3 === 0) {
+          pathPoints.push({ x: posX, y: posY });
+        }
+
+        // Never remove the first point, just trim excess (keeps origin visible)
+        if (pathPoints.length > 35000) {
+          pathPoints.shift();
+        }
+
+
+        // Add obstacles if sensor reading is below a threshold (simulate detection)
+        const threshold = 300;
+        if (frontDist < 128 && frontDist > 2) {
+          obstacles.push({
+            x: posX + (frontDist / CM_PER_UNIT) * Math.cos(yaw),
+            y: posY + (frontDist / CM_PER_UNIT) * Math.sin(yaw),
+            distance: frontDist  // Add this line
+
+          });
+        }
+        if (leftDist < threshold && leftDist > 1) {
+          obstacles.push({
+            x: posX + (leftDist / CM_PER_UNIT) * Math.cos(yaw + Math.PI / 2),
+            y: posY + (leftDist / CM_PER_UNIT) * Math.sin(yaw + Math.PI / 2),
+            distance: leftDist  // Add this line
+
+          });
+        }
+        if (rightDist < threshold && rightDist > 1) {
+          obstacles.push({
+            x: posX + (rightDist / CM_PER_UNIT) * Math.cos(yaw - Math.PI / 2),
+            y: posY + (rightDist / CM_PER_UNIT) * Math.sin(yaw - Math.PI / 2),
+                distance: rightDist  // Add this line
+
+          });
+        }
+
+        // Auto-follow rover when enabled
+        if (autoFollow) {
+          // Calculate desired pan to keep rover centered
+          const targetPanX = -posX * cellSize;
+          const targetPanY = posY * cellSize;
+
+          // Smooth transition (adjust 0.1 for faster/slower follow)
+          smoothPanX += (targetPanX - smoothPanX) * 0.1;
+          smoothPanY += (targetPanY - smoothPanY) * 0.1;
+
+          // Apply the smooth pan
+          panOffsetX = smoothPanX;
+          panOffsetY = smoothPanY;
+        }
+      }
+
+      // Render the entire map (grid, path, obstacles, rover)
+      function render() {
+        clearCanvas();
+        drawGrid();
+        drawObstacles();  
+
+        drawPath();
+        drawSegmentDistances();
+
+        drawRover();
+      }
+
+      // Touch event handlers
+      function handleTouchStart(e) {
+        if (autoFollow) {
+          autoFollow = false;
+          document.getElementById("followBtn").textContent = "Auto-Follow: OFF";
+          document.getElementById("followBtn").classList.add("off");
+        }
+
+        if (e.touches.length === 1) {
+          // Single touch - pan
+          isDragging = true;
+          lastPanX = e.touches[0].clientX;
+          lastPanY = e.touches[0].clientY;
+          e.preventDefault();
+        } else if (e.touches.length === 2) {
+          // Two touches - pinch to zoom
+          isPinching = true;
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+          e.preventDefault();
+        }
+      }
+
+      function handleTouchMove(e) {
+        if (isDragging && e.touches.length === 1) {
+          // Pan with one finger
+          const deltaX = e.touches[0].clientX - lastPanX;
+          const deltaY = e.touches[0].clientY - lastPanY;
+
+          panOffsetX += deltaX;
+          panOffsetY += deltaY;
+
+          lastPanX = e.touches[0].clientX;
+          lastPanY = e.touches[0].clientY;
+
+          render();
+          e.preventDefault();
+        } else if (isPinching && e.touches.length === 2) {
+          // Zoom with two fingers
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const touchDistance = Math.sqrt(dx * dx + dy * dy);
+
+          if (touchStartDistance > 0) {
+            const zoomFactor = touchDistance / touchStartDistance;
+            const newCellSize = cellSize * zoomFactor;
+
+            if (newCellSize > MIN_CELL_SIZE && newCellSize < MAX_CELL_SIZE) {
+              cellSize = newCellSize;
+            }
+
+            touchStartDistance = touchDistance;
+            render();
+          }
+          e.preventDefault();
+        }
+      }
+
+      function handleTouchEnd(e) {
+        isDragging = false;
+        isPinching = false;
+      }
+
+    //      const D = document.getElementById("D");
+    
+    
+    
+    //     if(realYawDeg>283 && realYawDeg<285)  {
+    //   D.innerText="FACING NORTH";
+    // }
+
+    
+
+      // Mouse event handlers
+      function handleMouseDown(e) {
+        if (autoFollow) {
+          autoFollow = false;
+          document.getElementById("followBtn").textContent = "Auto-Follow: OFF";
+          document.getElementById("followBtn").classList.add("off");
+        }
+        isDragging = true;
+        lastPanX = e.clientX;
+        lastPanY = e.clientY;
+        e.preventDefault();
+      }
+
+      function handleMouseMove(e) {
+        if (isDragging) {
+          const deltaX = e.clientX - lastPanX;
+          const deltaY = e.clientY - lastPanY;
+
+          panOffsetX += deltaX;
+          panOffsetY += deltaY;
+
+          lastPanX = e.clientX;
+          lastPanY = e.clientY;
+
+          render();
+        }
+      }
+
+      function handleMouseUp() {
+        isDragging = false;
+      }
+
+      // Start the simulation loop
+      function startSimulation() {
+        if (simInterval) return; // already running
+        simInterval = setInterval(() => {
+          updateSensors();
+          render();
+        }, 100); // update every 100 ms
+      }
+
+      // Reset everything to initial state
+      function resetSimulation() {
+        clearInterval(simInterval);
+        simInterval = null;
+        posX = 0;
+        posY = 0;
+        panOffsetX = 0;
+        panOffsetY = 0;
+        autoFollow = true;
+        document.getElementById("followBtn").textContent = "Auto-Follow: ON";
+        document.getElementById("followBtn").classList.remove("off");
+        smoothPanX = 0;
+        smoothPanY = 0;
+        yaw = 0;
+        distance = 0;
+        pathPoints = [{ x: posX, y: posY }];
+        obstacles = [];
+        // Reset displayed values
+        yawValueElem.textContent = "0";
+        distanceValueElem.textContent = "0";
+        frontValueElem.textContent = "0";
+        leftValueElem.textContent = "0";
+        rightValueElem.textContent = "0";
+        segments = [];
+currentSegment = { startX: 0, startY: 0, startDistance: 0, lastYaw: 0 };
+lastYaw = 0;
+        render();
+      }
+
+      // Zoom controls adjust cellSize and redraw
+      function zoomIn() {
+        if (cellSize < MAX_CELL_SIZE) {
+          cellSize += 5;
+          render();
+        }
+      }
+
+      function zoomOut() {
+        if (cellSize > MIN_CELL_SIZE) {
+          cellSize -= 5;
+          render();
+        }
+      }
+    </script>
+  </body>
+</html>
